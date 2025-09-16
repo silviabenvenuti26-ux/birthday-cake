@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Torta dinamica 🎂</title>
+  <title>Torta soffiabile 🎂</title>
   <style>
     body {
       font-family: 'Comic Sans MS', cursive, sans-serif;
@@ -66,23 +66,27 @@
       color: #ff9800;
       text-shadow: 1px 1px #fff;
     }
-    .note {
-      width: 100%;
-      text-align: center;
-      font-size: 0.9em;
-      margin-top: 6px;
-      color: #333;
+    #micButton {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      background: #ff4081;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
     }
-    em {
-      color: #666;
+    #micButton:disabled {
+      background: #aaa;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
 
-  <h1>🎂 Torta dinamica</h1>
+  <h1>🎂 Torta soffiabile</h1>
 
-  <!-- Contenitore torta -->
   <div id="cake">
     <div id="candles"></div>
     <div id="cake-base">🎂</div>
@@ -90,13 +94,17 @@
 
   <h2 id="greeting"></h2>
 
+  <button id="micButton">🎤 Attiva microfono</button>
+
+  <!-- Libreria coriandoli -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
   <script>
     (function(){
       const MAX_CANDLES = 50;
       const params = new URLSearchParams(window.location.search);
       const ageParam = params.get('age');
       const name = params.get('name') || '';
-
       const colors = ['#ff9aa2', '#9ad0ff', '#baffc9', '#ffffba'];
 
       function renderCandles(n) {
@@ -112,15 +120,10 @@
           c.appendChild(f);
           container.appendChild(c);
         }
-        if(n > MAX_CANDLES){
-          const note = document.createElement('div');
-          note.className = 'note';
-          note.textContent = `Mostrate ${MAX_CANDLES} candele su ${n} (limite massimo).`;
-          container.appendChild(note);
-        }
-        if(n <= 0){
-          container.innerHTML = '<em>0 candele</em>';
-        }
+      }
+
+      function allFlamesOut() {
+        return document.querySelectorAll('.flame').length === 0;
       }
 
       const age = ageParam ? parseInt(ageParam, 10) : null;
@@ -129,11 +132,55 @@
         greetingEl.textContent = (name ? `Buon compleanno, ${name}! ` : 'Buon compleanno! ') + `Hai ${age} anni 🎉`;
         renderCandles(age);
       } else {
-        greetingEl.textContent = (name ? `Ciao ${name}! ` : 'Ciao! ') + 'Apri la pagina con ?age=28 per vedere le candele';
+        greetingEl.textContent = 'Aggiungi ?age=NUMERO all\'URL per vedere le candele';
+      }
+
+      // ---- Microfono ----
+      const micButton = document.getElementById('micButton');
+      let analyser, dataArray;
+
+      micButton.addEventListener('click', async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          dataArray = new Uint8Array(analyser.frequencyBinCount);
+          source.connect(analyser);
+
+          detectBlow();
+          micButton.textContent = "Microfono attivo ✅";
+          micButton.disabled = true;
+        } catch (err) {
+          alert("Errore microfono: " + err.message);
+        }
+      });
+
+      function detectBlow() {
+        requestAnimationFrame(detectBlow);
+        if (!analyser) return;
+        analyser.getByteFrequencyData(dataArray);
+        let volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+        if (volume > 50) {
+          // Spegne una fiammella alla volta
+          const flame = document.querySelector('.flame');
+          if(flame) {
+            flame.remove();
+          }
+
+          // Quando sono tutte spente -> coriandoli
+          if (allFlamesOut()) {
+            greetingEl.textContent += " 🎊 Hai spento tutte le candeline!";
+            confetti();
+          }
+        }
       }
     })();
   </script>
 
 </body>
 </html>
+
 
