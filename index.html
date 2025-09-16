@@ -5,15 +5,77 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Torta dinamica 🎂</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; text-align:center; padding:20px; }
-    #cake { display:inline-block; position:relative; margin-top:20px; }
-    #candles { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; padding-bottom:8px; min-height:40px; }
-    .candle { width:8px; height:28px; border-radius:2px; background: linear-gradient(#fffaa8,#ffd79a); position:relative; }
-    .flame { position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:8px; height:12px; border-radius:50% 50% 40% 40%; background: radial-gradient(circle at 30% 30%, #fff, #ffcf33 40%, #ff7b00 70%); animation:flicker 800ms infinite; pointer-events:none; }
-    @keyframes flicker { 0% { transform:translateX(-50%) scale(1); opacity:1 } 50% { transform:translateX(-50%) scale(0.9); opacity:0.85 } 100% { transform:translateX(-50%) scale(1); opacity:1 } }
-    #cake-base { font-size:64px; margin-top:6px; }
-    .note { width:100%; text-align:center; font-size:0.9em; margin-top:6px; color:#333; }
-    em { color:#666; }
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #ffe8f0, #e8f9ff);
+    }
+    h1 {
+      color: #ff4081;
+      text-shadow: 2px 2px #fff;
+    }
+    #cake {
+      display: inline-block;
+      position: relative;
+      margin-top: 20px;
+    }
+    #candles {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      padding-bottom: 8px;
+      min-height: 40px;
+    }
+    .candle {
+      width: 10px;
+      height: 30px;
+      border-radius: 2px;
+      position: relative;
+    }
+    .flame {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 10px;
+      height: 14px;
+      border-radius: 50% 50% 40% 40%;
+      background: radial-gradient(circle at 30% 30%, #fff, #ffcf33 40%, #ff7b00 70%);
+      animation: flicker 0.8s infinite, sway 1s infinite ease-in-out;
+      pointer-events: none;
+    }
+    @keyframes flicker {
+      0% { opacity: 1; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.85; transform: translateX(-50%) scale(0.95); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    }
+    @keyframes sway {
+      0% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+      50% { transform: translateX(-50%) scale(0.95) rotate(2deg); }
+      100% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+    }
+    #cake-base {
+      font-size: 64px;
+      margin-top: 6px;
+    }
+    #greeting {
+      font-size: 1.8em;
+      margin-top: 15px;
+      color: #ff9800;
+      text-shadow: 1px 1px #fff;
+    }
+    .note {
+      width: 100%;
+      text-align: center;
+      font-size: 0.9em;
+      margin-top: 6px;
+      color: #333;
+    }
+    em {
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -35,6 +97,8 @@
       const ageParam = params.get('age');
       const name = params.get('name') || '';
 
+      const colors = ['#ff9aa2', '#9ad0ff', '#baffc9', '#ffffba'];
+
       function renderCandles(n) {
         const container = document.getElementById('candles');
         container.innerHTML = '';
@@ -42,6 +106,7 @@
         for (let i=0; i<count; i++){
           const c = document.createElement('div');
           c.className = 'candle';
+          c.style.background = colors[i % colors.length];
           const f = document.createElement('div');
           f.className = 'flame';
           c.appendChild(f);
@@ -50,7 +115,7 @@
         if(n > MAX_CANDLES){
           const note = document.createElement('div');
           note.className = 'note';
-          note.textContent = `Mostrate ${MAX_CANDLES} candele su ${n} (limite per motivi pratici).`;
+          note.textContent = `Mostrate ${MAX_CANDLES} candele su ${n} (limite massimo).`;
           container.appendChild(note);
         }
         if(n <= 0){
@@ -68,46 +133,7 @@
       }
     })();
   </script>
-<button id="micButton">🎤 Attiva microfono</button>
-
-<script>
-  const micButton = document.getElementById('micButton');
-  let audioContext, analyser, dataArray;
-
-  micButton.addEventListener('click', async () => {
-    try {
-      // Chiede accesso al microfono
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      const bufferLength = analyser.frequencyBinCount;
-      dataArray = new Uint8Array(bufferLength);
-
-      source.connect(analyser);
-
-      // Avvia il controllo continuo del volume
-      detectBlow();
-      micButton.textContent = "Microfono attivo ✅";
-      micButton.disabled = true;
-    } catch (err) {
-      alert("Errore nell'accesso al microfono: " + err.message);
-    }
-  });
-
-  function detectBlow() {
-    requestAnimationFrame(detectBlow);
-    analyser.getByteFrequencyData(dataArray);
-    let volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
-
-    // Se il volume è alto -> spegni le candele
-    if (volume > 50) {  // soglia da regolare
-      document.querySelectorAll('.flame').forEach(f => f.remove());
-    }
-  }
-</script>
 
 </body>
 </html>
+
