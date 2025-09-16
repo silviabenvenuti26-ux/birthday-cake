@@ -68,6 +68,46 @@
       }
     })();
   </script>
+<button id="micButton">🎤 Attiva microfono</button>
+
+<script>
+  const micButton = document.getElementById('micButton');
+  let audioContext, analyser, dataArray;
+
+  micButton.addEventListener('click', async () => {
+    try {
+      // Chiede accesso al microfono
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      source.connect(analyser);
+
+      // Avvia il controllo continuo del volume
+      detectBlow();
+      micButton.textContent = "Microfono attivo ✅";
+      micButton.disabled = true;
+    } catch (err) {
+      alert("Errore nell'accesso al microfono: " + err.message);
+    }
+  });
+
+  function detectBlow() {
+    requestAnimationFrame(detectBlow);
+    analyser.getByteFrequencyData(dataArray);
+    let volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+    // Se il volume è alto -> spegni le candele
+    if (volume > 50) {  // soglia da regolare
+      document.querySelectorAll('.flame').forEach(f => f.remove());
+    }
+  }
+</script>
 
 </body>
 </html>
